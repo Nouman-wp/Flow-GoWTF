@@ -1,0 +1,35 @@
+{
+  "networks": {
+    "emulator": "127.0.0.1:3569",
+    "mainnet": "access.mainnet.nodes.onflow.org:9000",
+    "testnet": "access.devnet.nodes.onflow.org:9000"
+  },
+  "contracts": {
+    "AniverseNFT": {
+      "source": "./AniverseNFT.cdc",
+      "aliases": {
+        "emulator": "0xf8d6e0586b0a20c7",
+        "testnet": "0x1234567890abcdef",
+        "mainnet": "0x1234567890abcdef"
+      }
+    }
+  },
+  "accounts": {
+    "emulator-account": {
+      "address": "f8d6e0586b0a20c7",
+      "key": "f8e188e8af0b8b414be59c4a1a15ffdf"
+    },
+    "testnet-account": {
+      "address": "0x1234567890abcdef",
+      "key": "your_private_key_here"
+    }
+  },
+  "deployments": {
+    "emulator": {
+      "emulator-account": ["AniverseNFT"]
+    },
+    "testnet": {
+      "testnet-account": ["AniverseNFT"]
+    }
+  }
+}

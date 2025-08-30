@@ -1,0 +1,37 @@
+{
+  "name": "aniverse",
+  "version": "1.0.0",
+  "description": "Next-gen NFT platform for anime lovers on Flow blockchain",
+  "main": "index.js",
+  "scripts": {
+    "install:all": "npm install && cd client && npm install && cd ../server && npm install",
+    "dev:client": "cd client && npm run dev",
+    "dev:server": "cd server && npm run dev",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "build:client": "cd client && npm run build",
+    "build:server": "cd server && npm run build",
+    "build": "npm run build:server && npm run build:client",
+    "test:client": "cd client && npm test",
+    "test:server": "cd server && npm test",
+    "test": "npm run test:server && npm run test:client",
+    "deploy:contracts": "cd contracts && flow deploy --network=testnet",
+    "deploy:mainnet": "cd contracts && flow deploy --network=mainnet",
+    "start": "cd server && npm start"
+  },
+  "keywords": [
+    "nft",
+    "anime",
+    "flow",
+    "blockchain",
+    "ipfs",
+    "marketplace"
+  ],
+  "author": "Aniverse Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "dependencies": {
+    "mongodb": "^6.19.0"
+  }
+}
