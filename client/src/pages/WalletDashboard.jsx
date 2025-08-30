@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useParams } from 'react-router-dom';
 import { useWallet } from '../contexts/WalletContext';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../services/api';
+import api from '../services/api';
 
 const WalletDashboard = () => {
   const { walletAddress } = useParams();

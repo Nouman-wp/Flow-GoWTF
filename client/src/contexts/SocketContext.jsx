@@ -19,7 +19,7 @@ export const SocketProvider = ({ children }) => {
 
   useEffect(() => {
     // Initialize socket connection
-    const newSocket = io(process.env.REACT_APP_SERVER_URL || 'http://localhost:5000', {
+    const newSocket = io(import.meta.env.VITE_SERVER_URL || 'http://localhost:5000', {
       transports: ['websocket', 'polling'],
       autoConnect: false,
     });

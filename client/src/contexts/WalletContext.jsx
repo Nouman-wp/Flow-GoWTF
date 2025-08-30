@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { fcl } from '@onflow/fcl';
-import { useQuery, useMutation, useQueryClient } from 'react-query';
+import * as fcl from '@onflow/fcl';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 
@@ -22,21 +22,20 @@ export const WalletProvider = ({ children }) => {
 
   // Configure FCL
   useEffect(() => {
-    if (process.env.NODE_ENV === 'production') {
-      fcl.config()
-        .put('accessNode.api', 'https://rest-mainnet.onflow.org')
-        .put('discovery.wallet', 'https://fcl-discovery.onflow.org/authn')
-        .put('discovery.authn.endpoint', 'https://fcl-discovery.onflow.org/api/authn')
-        .put('app.detail.title', 'Aniverse NFT Platform')
-        .put('app.detail.icon', 'https://aniverse.com/icon.png');
-    } else {
-      fcl.config()
-        .put('accessNode.api', 'https://rest-testnet.onflow.org')
-        .put('discovery.wallet', 'https://fcl-discovery.onflow.org/authn')
-        .put('discovery.authn.endpoint', 'https://fcl-discovery.onflow.org/api/authn')
-        .put('app.detail.title', 'Aniverse NFT Platform (Testnet)')
-        .put('app.detail.icon', 'https://aniverse.com/icon.png');
-    }
+    const isProd = import.meta.env.PROD;
+    const accessNode = isProd
+      ? (import.meta.env.VITE_FLOW_ACCESS_NODE || 'https://rest-mainnet.onflow.org')
+      : (import.meta.env.VITE_FLOW_ACCESS_NODE || 'https://rest-testnet.onflow.org');
+    const discoveryWallet = isProd
+      ? (import.meta.env.VITE_FCL_DISCOVERY || 'https://fcl-discovery.onflow.org/authn')
+      : (import.meta.env.VITE_FCL_DISCOVERY || 'https://fcl-discovery.onflow.org/testnet/authn');
+
+    fcl.config()
+      .put('accessNode.api', accessNode)
+      .put('discovery.wallet', discoveryWallet)
+      .put('discovery.authn.endpoint', discoveryWallet)
+      .put('app.detail.title', isProd ? 'Aniverse NFT Platform' : 'Aniverse NFT Platform (Testnet)')
+      .put('app.detail.icon', 'https://aniverse.com/icon.png');
 
     // Subscribe to user changes
     fcl.currentUser.subscribe((user) => {
@@ -168,7 +167,8 @@ export const WalletProvider = ({ children }) => {
       try {
         const account = await fcl.send([fcl.getAccount(user.flowWalletAddress)]);
         const decoded = await fcl.decode(account);
-        return decoded.contracts[process.env.REACT_APP_FLOW_CONTRACT_ADDRESS] !== undefined;
+        const contractAddress = import.meta.env.VITE_FLOW_CONTRACT_ADDRESS;
+        return contractAddress ? decoded.contracts[contractAddress] !== undefined : false;
       } catch (error) {
         console.error('Error checking collection:', error);
         return false;
@@ -207,10 +207,13 @@ export const WalletProvider = ({ children }) => {
     async () => {
       if (!user?.flowWalletAddress) throw new Error('User not connected');
       
+      const contractAddress = import.meta.env.VITE_FLOW_CONTRACT_ADDRESS;
+      if (!contractAddress) throw new Error('FLOW contract address not configured');
+
       const transactionId = await fcl.send([
         fcl.transaction(`
           import NonFungibleToken from 0xNonFungibleToken
-          import AniverseNFT from ${process.env.REACT_APP_FLOW_CONTRACT_ADDRESS}
+          import AniverseNFT from ${contractAddress}
           
           transaction {
             prepare(signer: AuthAccount) {
