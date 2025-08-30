@@ -1,5 +1,5 @@
-const { fcl } = require('@onflow/fcl');
-const { t } = require('@onflow/types');
+const fcl = require('@onflow/fcl');
+const t = require('@onflow/types');
 
 // Configure FCL for the environment
 const configureFCL = () => {

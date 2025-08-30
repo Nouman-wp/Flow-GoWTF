@@ -2,15 +2,11 @@ const express = require('express');
 const multer = require('multer');
 const { body, validationResult } = require('express-validator');
 const { authenticateToken } = require('../middleware/auth');
-const PinataSDK = require('pinata-sdk');
+const pinata = require('../config/pinata');
 
 const router = express.Router();
 
-// Configure Pinata
-const pinata = new PinataSDK({
-  pinataApiKey: process.env.PINATA_API_KEY,
-  pinataSecretApiKey: process.env.PINATA_SECRET_KEY
-});
+// Pinata is configured via server/src/config/pinata.js
 
 // Configure multer for file uploads
 const upload = multer({
@@ -51,20 +47,11 @@ router.post('/upload', [
     const { metadata = {} } = req.body;
     const file = req.file;
 
-    // Prepare file data for Pinata
-    const fileData = {
-      name: file.originalname,
-      description: metadata.description || 'Uploaded to Aniverse NFT Platform',
-      image: file.buffer,
-      attributes: metadata.attributes || [],
-      external_url: metadata.external_url || '',
-      collection: metadata.collection || 'Aniverse',
-      creator: req.user.flowWalletAddress
-    };
-
-    // Upload to Pinata
-    const result = await pinata.pinFileToIPFS(file.buffer, {
-      pinataMetadata: {
+    // Upload binary to IPFS
+    const result = await pinata.uploadBuffer(file.buffer, {
+      fileName: file.originalname,
+      contentType: file.mimetype,
+      metadata: {
         name: file.originalname,
         keyvalues: {
           platform: 'Aniverse',
@@ -87,14 +74,12 @@ router.post('/upload', [
     };
 
     // Upload metadata to IPFS
-    const metadataResult = await pinata.pinJSONToIPFS(metadataJSON, {
-      pinataMetadata: {
-        name: `${file.originalname}_metadata`,
-        keyvalues: {
-          type: 'metadata',
-          platform: 'Aniverse',
-          creator: req.user.flowWalletAddress
-        }
+    const metadataResult = await pinata.uploadJSON(metadataJSON, {
+      name: `${file.originalname}_metadata`,
+      keyvalues: {
+        type: 'metadata',
+        platform: 'Aniverse',
+        creator: req.user.flowWalletAddress
       }
     });
 
@@ -104,14 +89,14 @@ router.post('/upload', [
         name: file.originalname,
         size: file.size,
         mimeType: file.mimetype,
-        ipfsHash: result.IpfsHash,
-        ipfsUrl: `ipfs://${result.IpfsHash}`,
-        gatewayUrl: `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`
+        ipfsHash: result.ipfsHash,
+        ipfsUrl: `ipfs://${result.ipfsHash}`,
+        gatewayUrl: result.url
       },
       metadata: {
-        ipfsHash: metadataResult.IpfsHash,
-        ipfsUrl: `ipfs://${metadataResult.IpfsHash}`,
-        gatewayUrl: `https://gateway.pinata.cloud/ipfs/${metadataResult.IpfsHash}`
+        ipfsHash: metadataResult.ipfsHash,
+        ipfsUrl: `ipfs://${metadataResult.ipfsHash}`,
+        gatewayUrl: `https://gateway.pinata.cloud/ipfs/${metadataResult.ipfsHash}`
       }
     });
 
@@ -170,24 +155,22 @@ router.post('/metadata', [
     };
 
     // Upload metadata to IPFS
-    const result = await pinata.pinJSONToIPFS(metadataJSON, {
-      pinataMetadata: {
-        name: `${name}_metadata`,
-        keyvalues: {
-          type: 'metadata',
-          platform: 'Aniverse',
-          creator: req.user.flowWalletAddress,
-          collection
-        }
+    const result = await pinata.uploadJSON(metadataJSON, {
+      name: `${name}_metadata`,
+      keyvalues: {
+        type: 'metadata',
+        platform: 'Aniverse',
+        creator: req.user.flowWalletAddress,
+        collection
       }
     });
 
     res.json({
       message: 'Metadata uploaded successfully',
       metadata: {
-        ipfsHash: result.IpfsHash,
-        ipfsUrl: `ipfs://${result.IpfsHash}`,
-        gatewayUrl: `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`,
+        ipfsHash: result.ipfsHash,
+        ipfsUrl: `ipfs://${result.ipfsHash}`,
+        gatewayUrl: `https://gateway.pinata.cloud/ipfs/${result.ipfsHash}`,
         data: metadataJSON
       }
     });
@@ -212,14 +195,14 @@ router.get('/:cid', async (req, res) => {
     }
 
     // Get file info from Pinata
-    const fileInfo = await pinata.getFileFromIPFS(cid);
+    const fileInfo = await pinata.getFileInfo(cid);
     
     res.json({
       cid,
       ipfsUrl: `ipfs://${cid}`,
       gatewayUrl: `https://gateway.pinata.cloud/ipfs/${cid}`,
-      size: fileInfo.size,
-      timestamp: fileInfo.timestamp
+      size: fileInfo?.size,
+      timestamp: fileInfo?.timestamp
     });
 
   } catch (error) {
@@ -250,8 +233,10 @@ router.post('/batch-upload', [
     for (const file of files) {
       try {
         // Upload file to Pinata
-        const fileResult = await pinata.pinFileToIPFS(file.buffer, {
-          pinataMetadata: {
+        const fileResult = await pinata.uploadBuffer(file.buffer, {
+          fileName: file.originalname,
+          contentType: file.mimetype,
+          metadata: {
             name: file.originalname,
             keyvalues: {
               platform: 'Aniverse',
@@ -265,7 +250,7 @@ router.post('/batch-upload', [
         const fileMetadata = {
           name: file.originalname,
           description: metadata.description || 'Uploaded to Aniverse NFT Platform',
-          image: `ipfs://${fileResult.IpfsHash}`,
+          image: `ipfs://${fileResult.ipfsHash}`,
           attributes: metadata.attributes || [],
           external_url: metadata.external_url || '',
           collection: metadata.collection || 'Aniverse',
@@ -274,14 +259,12 @@ router.post('/batch-upload', [
         };
 
         // Upload metadata to IPFS
-        const metadataResult = await pinata.pinJSONToIPFS(fileMetadata, {
-          pinataMetadata: {
-            name: `${file.originalname}_metadata`,
-            keyvalues: {
-              type: 'metadata',
-              platform: 'Aniverse',
-              creator: req.user.flowWalletAddress
-            }
+        const metadataResult = await pinata.uploadJSON(fileMetadata, {
+          name: `${file.originalname}_metadata`,
+          keyvalues: {
+            type: 'metadata',
+            platform: 'Aniverse',
+            creator: req.user.flowWalletAddress
           }
         });
 
@@ -290,14 +273,14 @@ router.post('/batch-upload', [
           size: file.size,
           mimeType: file.mimetype,
           file: {
-            ipfsHash: fileResult.IpfsHash,
-            ipfsUrl: `ipfs://${fileResult.IpfsHash}`,
-            gatewayUrl: `https://gateway.pinata.cloud/ipfs/${fileResult.IpfsHash}`
+            ipfsHash: fileResult.ipfsHash,
+            ipfsUrl: `ipfs://${fileResult.ipfsHash}`,
+            gatewayUrl: fileResult.url
           },
           metadata: {
-            ipfsHash: metadataResult.IpfsHash,
-            ipfsUrl: `ipfs://${metadataResult.IpfsHash}`,
-            gatewayUrl: `https://gateway.pinata.cloud/ipfs/${metadataResult.IpfsHash}`
+            ipfsHash: metadataResult.ipfsHash,
+            ipfsUrl: `ipfs://${metadataResult.ipfsHash}`,
+            gatewayUrl: `https://gateway.pinata.cloud/ipfs/${metadataResult.ipfsHash}`
           }
         });
 

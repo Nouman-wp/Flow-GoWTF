@@ -1,4 +1,4 @@
-const { PinataSDK } = require('@pinata/sdk');
+const PinataSDK = require('@pinata/sdk');
 const FormData = require('form-data');
 const fs = require('fs');
 const path = require('path');

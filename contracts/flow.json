@@ -9,8 +9,8 @@
       "source": "./AniverseNFT.cdc",
       "aliases": {
         "emulator": "0xf8d6e0586b0a20c7",
-        "testnet": "0x1234567890abcdef",
-        "mainnet": "0x1234567890abcdef"
+        "testnet": "0x0dffda0f5343e1ca",
+        "mainnet": "0x0dffda0f5343e1ca"
       }
     }
   },
@@ -20,8 +20,8 @@
       "key": "f8e188e8af0b8b414be59c4a1a15ffdf"
     },
     "testnet-account": {
-      "address": "0x1234567890abcdef",
-      "key": "your_private_key_here"
+      "address": "0x0dffda0f5343e1ca",
+      "key": "586bbe9d66dc1d71f13b95000c064996c01dbf834b776a659eef6889241e"
     }
   },
   "deployments": {
