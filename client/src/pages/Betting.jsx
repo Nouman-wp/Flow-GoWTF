@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useWallet } from '../contexts/WalletContext';
 import { useQuery } from '@tanstack/react-query';
@@ -32,11 +32,55 @@ const Betting = () => {
     { id: 'completed', name: 'Completed', color: 'text-purple-600' },
   ];
 
-  const filteredMatches = matchesData?.data?.matches?.filter(match => {
+  const computeProgress = (startTime, endTime) => {
+    try {
+      const start = new Date(startTime).getTime();
+      const end = new Date(endTime).getTime();
+      const now = Date.now();
+      if (!isFinite(start) || !isFinite(end) || end <= start) return 0;
+      if (now <= start) return 0;
+      if (now >= end) return 100;
+      return Math.max(0, Math.min(100, Math.round(((now - start) / (end - start)) * 100)));
+    } catch {
+      return 0;
+    }
+  };
+
+  const normalizedMatches = useMemo(() => {
+    const raw = matchesData?.data?.matches || [];
+    return raw.map((m) => {
+      const participants = Array.isArray(m.participants)
+        ? m.participants
+        : (Array.isArray(m.options)
+            ? m.options.map((opt, idx) => ({ id: `${m.id}_${idx}`, name: String(opt), odds: '2.0' }))
+            : []);
+
+      return {
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        startTime: m.startTime,
+        endTime: m.endTime,
+        status: m.status,
+        category: m.category,
+        type: m.category,
+        totalBets: m.totalBets ?? 0,
+        totalVolume: m.totalVolume ?? 0,
+        totalPool: m.totalVolume ?? 0,
+        minBet: m.minBet ?? 1,
+        maxBet: m.maxBet ?? 100,
+        progress: m.progress ?? computeProgress(m.startTime, m.endTime),
+        metadata: m.metadata || {},
+        participants,
+      };
+    });
+  }, [matchesData]);
+
+  const filteredMatches = normalizedMatches.filter((match) => {
     const matchesCategory = selectedCategory === 'all' || match.category === selectedCategory;
     const matchesStatus = selectedStatus === 'all' || match.status === selectedStatus;
     return matchesCategory && matchesStatus;
-  }) || [];
+  });
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -203,7 +247,7 @@ const Betting = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredMatches.map((match) => (
                 <motion.div
-                  key={match.matchId}
+                  key={match.id}
                   variants={itemVariants}
                   className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden group cursor-pointer"
                 >
@@ -252,10 +296,10 @@ const Betting = () => {
                     {/* Participants */}
                     <div className="mb-4">
                       <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
-                        Participants ({match.participants.length})
+                        Participants ({(match.participants || []).length})
                       </h4>
                       <div className="space-y-2">
-                        {match.participants.slice(0, 3).map((participant, index) => (
+                        {(match.participants || []).slice(0, 3).map((participant, index) => (
                           <div key={participant.id} className="flex items-center justify-between text-sm">
                             <span className="text-gray-600 dark:text-gray-400">
                               {index + 1}. {participant.name}
@@ -265,9 +309,9 @@ const Betting = () => {
                             </span>
                           </div>
                         ))}
-                        {match.participants.length > 3 && (
+                        {(match.participants || []).length > 3 && (
                           <div className="text-xs text-gray-500 text-center">
-                            +{match.participants.length - 3} more
+                            +{(match.participants || []).length - 3} more
                           </div>
                         )}
                       </div>
