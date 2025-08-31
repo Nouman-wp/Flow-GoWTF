@@ -49,13 +49,13 @@ const nftSchema = new mongoose.Schema({
     },
     display_type: {
       type: String,
-      enum: ['number', 'boost_percentage', 'boost_number', 'date'],
+      enum: ['string', 'number', 'boost_percentage', 'boost_number', 'date'],
       default: 'string'
     }
   }],
   collection: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'NFTCollection',
+    ref: 'Collection',
     required: true
   },
   collectionName: {
@@ -86,13 +86,14 @@ const nftSchema = new mongoose.Schema({
   },
   flowContractAddress: {
     type: String,
-    required: true,
+    required: false,
     match: [/^0x[a-fA-F0-9]{16}$/, 'Invalid Flow contract address']
   },
   flowTokenId: {
     type: String,
-    required: true,
-    unique: true
+    required: false,
+    unique: true,
+    sparse: true
   },
   mintDate: {
     type: Date,
@@ -154,8 +155,8 @@ const nftSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['minted', 'transferring', 'burned', 'error'],
-    default: 'minted'
+    enum: ['listed', 'minted', 'transferring', 'burned', 'error'],
+    default: 'listed'
   },
   blockchainData: {
     transactionHash: String,
@@ -173,6 +174,7 @@ const nftSchema = new mongoose.Schema({
 
 // Indexes for better query performance
 nftSchema.index({ tokenId: 1 });
+nftSchema.index({ flowTokenId: 1 }, { unique: true, sparse: true });
 nftSchema.index({ collection: 1 });
 nftSchema.index({ owner: 1 });
 nftSchema.index({ creator: 1 });
@@ -209,7 +211,7 @@ nftSchema.virtual('rarityColor').get(function() {
 // Pre-save middleware to update collection name if not set
 nftSchema.pre('save', async function(next) {
   if (this.isModified('collection') && !this.collectionName) {
-    const collection = await mongoose.model('NFTCollection').findById(this.collection);
+    const collection = await mongoose.model('Collection').findById(this.collection);
     if (collection) {
       this.collectionName = collection.name;
     }

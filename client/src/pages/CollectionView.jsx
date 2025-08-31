@@ -6,7 +6,8 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 
 const CollectionView = () => {
-  const { collectionId } = useParams();
+  const params = useParams();
+  const collectionId = params.collectionId || params.collection;
   const navigate = useNavigate();
   const { user } = useWallet();
   const [filterRarity, setFilterRarity] = useState('all');
@@ -79,7 +80,9 @@ const CollectionView = () => {
       >
         <div className="absolute inset-0 z-0">
           <img
-            src={collectionData.banner || collectionData.image}
+            src={(collectionData.banner || collectionData.image)?.startsWith('ipfs://')
+              ? (collectionData.banner || collectionData.image).replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/')
+              : (collectionData.banner || collectionData.image)}
             alt={collectionData.name}
             className="w-full h-full object-cover opacity-20"
           />
@@ -90,7 +93,7 @@ const CollectionView = () => {
           <div className="flex flex-col lg:flex-row items-start lg:items-center gap-8">
             <div className="flex-shrink-0">
               <img
-                src={collectionData.image}
+                src={collectionData.image?.startsWith('ipfs://') ? collectionData.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') : collectionData.image}
                 alt={collectionData.name}
                 className="w-32 h-32 lg:w-48 lg:h-48 rounded-2xl shadow-2xl border-4 border-white dark:border-gray-800"
               />
@@ -191,7 +194,7 @@ const CollectionView = () => {
                 >
                   <div className="relative overflow-hidden">
                     <img
-                      src={nft.image}
+                      src={nft.image?.startsWith('ipfs://') ? nft.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') : nft.image}
                       alt={nft.name}
                       className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
@@ -218,10 +221,10 @@ const CollectionView = () => {
                     
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold text-emerald-600">
-                        {nft.price ? `${nft.price} FLOW` : 'Not for sale'}
+                        {nft.isForSale && typeof nft.salePrice === 'number' ? `${nft.salePrice} FLOW` : 'Not for sale'}
                       </span>
                       <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors">
-                        View Details
+                        Buy
                       </button>
                     </div>
                   </div>

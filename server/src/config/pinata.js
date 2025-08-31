@@ -49,38 +49,31 @@ class PinataService {
     }
 
     try {
-      const formData = new FormData();
-      
-      // Add file to form data
       const fileStream = fs.createReadStream(filePath);
       const fileName = options.fileName || path.basename(filePath);
-      
-      formData.append('file', fileStream, {
-        filename: fileName,
-        contentType: options.contentType || 'application/octet-stream'
-      });
 
-      // Add metadata if provided
-      if (options.metadata) {
-        formData.append('pinataMetadata', JSON.stringify({
-          name: options.metadata.name || fileName,
-          keyvalues: options.metadata.keyvalues || {}
-        }));
+      const pinOpts = {
+        pinataMetadata: {
+          name: (options.metadata && options.metadata.name) || fileName,
+          keyvalues: (options.metadata && options.metadata.keyvalues) || {},
+        },
+        pinataOptions: options.pinataOptions || { cidVersion: 0 },
+      };
+
+      let result;
+      try {
+        result = await this.pinata.pinFileToIPFS(fileStream, pinOpts);
+      } catch (e) {
+        console.error('Pinata pinFileToIPFS error:', e?.response?.data || e?.message || e);
+        throw e;
       }
 
-      // Add options if provided
-      if (options.pinataOptions) {
-        formData.append('pinataOptions', JSON.stringify(options.pinataOptions));
-      }
-
-      const result = await this.pinata.pinFileToIPFS(formData);
-      
       return {
         success: true,
         ipfsHash: result.IpfsHash,
         pinSize: result.PinSize,
         timestamp: result.Timestamp,
-        url: `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`
+        url: `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`,
       };
     } catch (error) {
       throw new Error(`Failed to upload file to IPFS: ${error.message}`);
@@ -94,35 +87,32 @@ class PinataService {
     }
 
     try {
-      const formData = new FormData();
-      
-      // Add buffer to form data
-      formData.append('file', buffer, {
-        filename: options.fileName || 'file',
-        contentType: options.contentType || 'application/octet-stream'
-      });
+      const { Readable } = require('stream');
+      const stream = Readable.from(buffer);
+      const fileName = options.fileName || 'file';
 
-      // Add metadata if provided
-      if (options.metadata) {
-        formData.append('pinataMetadata', JSON.stringify({
-          name: options.metadata.name || 'file',
-          keyvalues: options.metadata.keyvalues || {}
-        }));
+      const pinOpts = {
+        pinataMetadata: {
+          name: (options.metadata && options.metadata.name) || fileName,
+          keyvalues: (options.metadata && options.metadata.keyvalues) || {},
+        },
+        pinataOptions: options.pinataOptions || { cidVersion: 0 },
+      };
+
+      let result;
+      try {
+        result = await this.pinata.pinFileToIPFS(stream, pinOpts);
+      } catch (e) {
+        console.error('Pinata pinFileToIPFS(buffer) error:', e?.response?.data || e?.message || e);
+        throw e;
       }
 
-      // Add options if provided
-      if (options.pinataOptions) {
-        formData.append('pinataOptions', JSON.stringify(options.pinataOptions));
-      }
-
-      const result = await this.pinata.pinFileToIPFS(formData);
-      
       return {
         success: true,
         ipfsHash: result.IpfsHash,
         pinSize: result.PinSize,
         timestamp: result.Timestamp,
-        url: `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`
+        url: `https://gateway.pinata.cloud/ipfs/${result.IpfsHash}`,
       };
     } catch (error) {
       throw new Error(`Failed to upload buffer to IPFS: ${error.message}`);

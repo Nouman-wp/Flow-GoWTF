@@ -45,7 +45,7 @@ const userSchema = new mongoose.Schema({
   },
   nftCollections: [{
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'NFTCollection'
+    ref: 'Collection'
   }],
   ownedNFTs: [{
     type: mongoose.Schema.Types.ObjectId,

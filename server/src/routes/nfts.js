@@ -1,29 +1,19 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const NFT = require('../models/NFT');
+const Collection = require('../models/Collection');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
 const { flowUtils } = require('../utils/flow');
 
 const router = express.Router();
 
-// Get all NFT collections
+// Get all NFT collections (from Collection model)
 router.get('/collections', async (req, res) => {
   try {
-    const collections = await NFT.aggregate([
-      {
-        $group: {
-          _id: '$collection',
-          name: { $first: '$collectionName' },
-          description: { $first: '$description' },
-          image: { $first: '$image' },
-          count: { $sum: 1 },
-          floorPrice: { $min: '$salePrice' },
-          totalVolume: { $sum: '$salePrice' },
-          averagePrice: { $avg: '$salePrice' }
-        }
-      },
-      { $sort: { count: -1 } }
-    ]);
+    const collections = await Collection.find()
+      .select('name description image banner creator category tags attributes supply pricing status visibility metadata statistics')
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.json({ collections });
   } catch (error) {
@@ -35,8 +25,26 @@ router.get('/collections', async (req, res) => {
   }
 });
 
-// Get collection by ID
+// Get collection by ID (details)
 router.get('/collections/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const collection = await Collection.findById(id)
+      .select('-__v')
+      .lean();
+    if (!collection) return res.status(404).json({ error: 'Collection not found' });
+    res.json({ collection });
+  } catch (error) {
+    console.error('Get collection error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get collection',
+      message: error.message 
+    });
+  }
+});
+
+// Get NFTs by collection ID (paginated)
+router.get('/collections/:id/nfts', async (req, res) => {
   try {
     const { id } = req.params;
     const { page = 1, limit = 20, sortBy = 'mintDate', sortOrder = 'desc' } = req.query;
@@ -63,9 +71,27 @@ router.get('/collections/:id', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get collection error:', error);
+    console.error('Get collection NFTs error:', error);
     res.status(500).json({ 
-      error: 'Failed to get collection',
+      error: 'Failed to get collection NFTs',
+      message: error.message 
+    });
+  }
+});
+
+// Featured NFTs (simple: top for-sale by price)
+router.get('/featured', async (req, res) => {
+  try {
+    const n = parseInt(req.query.limit || '12');
+    const nfts = await NFT.find({ isForSale: true })
+      .sort({ salePrice: -1 })
+      .limit(n)
+      .lean();
+    res.json({ nfts });
+  } catch (error) {
+    console.error('Get featured NFTs error:', error);
+    res.status(500).json({ 
+      error: 'Failed to get featured NFTs',
       message: error.message 
     });
   }
@@ -190,7 +216,18 @@ router.get('/owner/:ownerId', async (req, res) => {
     
     const skip = (page - 1) * limit;
 
-    const nfts = await NFT.find({ owner: ownerId })
+    // If ownerId looks like a Mongo ObjectId, query by user ObjectId; otherwise, lookup by wallet address
+    let ownerQuery;
+    if (/^[a-fA-F0-9]{24}$/.test(ownerId)) {
+      ownerQuery = { owner: ownerId };
+    } else {
+      // Find user by wallet address, then query by their _id
+      const User = require('../models/User');
+      const user = await User.findOne({ flowWalletAddress: ownerId });
+      ownerQuery = user ? { owner: user._id } : { owner: null };
+    }
+
+    const nfts = await NFT.find(ownerQuery)
       .populate('collection', 'name')
       .sort({ mintDate: -1 })
       .skip(skip)

@@ -199,7 +199,7 @@ const Marketplace = () => {
                 >
                   <div className="relative overflow-hidden">
                     <img
-                      src={nft.image}
+                      src={nft.image?.startsWith('ipfs://') ? nft.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') : nft.image}
                       alt={nft.name}
                       className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
@@ -224,7 +224,7 @@ const Marketplace = () => {
                     </p>
                     <div className="flex items-center justify-between">
                       <span className="text-2xl font-bold text-emerald-600">
-                        {nft.price ? `${nft.price} FLOW` : 'Not for sale'}
+                        {nft.isForSale && typeof nft.salePrice === 'number' ? `${nft.salePrice} FLOW` : 'Not for sale'}
                       </span>
                       <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors">
                         View Details
@@ -275,7 +275,7 @@ const Marketplace = () => {
                 >
                   <div className="relative overflow-hidden">
                     <img
-                      src={collection.image}
+                      src={collection.image?.startsWith('ipfs://') ? collection.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') : collection.image}
                       alt={collection.name}
                       className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
@@ -330,9 +330,9 @@ const Marketplace = () => {
                         <span className="text-sm text-gray-600 dark:text-gray-400">
                           Mint Price: {collection.pricing?.mintPrice ? `${collection.pricing.mintPrice} FLOW` : 'Free'}
                         </span>
-                        <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg transition-colors font-medium">
+                        <a href={`/marketplace/${collection._id}/view`} className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg transition-colors font-medium">
                           Explore Collection
-                        </button>
+                        </a>
                       </div>
                     </div>
                   </div>
