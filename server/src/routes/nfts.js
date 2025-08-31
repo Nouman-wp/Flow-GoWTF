@@ -1,9 +1,10 @@
 const express = require('express');
-const { body, validationResult } = require('express-validator');
+// express-validator already imported above
 const NFT = require('../models/NFT');
 const Collection = require('../models/Collection');
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
-const { flowUtils } = require('../utils/flow');
+const { fcl } = require('../utils/flow');
+const { body, validationResult } = require('express-validator');
 
 const router = express.Router();
 
@@ -253,6 +254,43 @@ router.get('/owner/:ownerId', async (req, res) => {
   }
 });
 
+// Verify payment and mint to buyer (server mints)
+router.post('/purchase', [
+  authenticateToken,
+  body('nftId').isMongoId(),
+  body('flowTxId').isString(),
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ error: 'Validation failed', details: errors.array() });
+    }
+
+    const { nftId, flowTxId } = req.body;
+    const NFTModel = require('../models/NFT');
+    const nft = await NFTModel.findById(nftId);
+    if (!nft) return res.status(404).json({ error: 'NFT not found' });
+    if (!nft.isForSale) return res.status(400).json({ error: 'NFT is not for sale' });
+
+    // Verify tx paid treasury at least price
+    const treasury = process.env.TREASURY_ADDRESS;
+    const tx = await fcl.tx(flowTxId).onceSealed();
+    const deposits = tx.events.filter(e => e.type.includes('A.7e60df042a9c0868.FlowToken.TokensDeposited'));
+    const paidToTreasury = deposits.some(e => e.data.to === treasury && parseFloat(e.data.amount) >= nft.salePrice);
+    if (!paidToTreasury) return res.status(400).json({ error: 'Payment not verified' });
+
+    // Mark sold to user
+    nft.owner = req.user.userId;
+    nft.isForSale = false;
+    await nft.save();
+
+    res.json({ message: 'Purchase verified and recorded', nft });
+  } catch (error) {
+    console.error('Purchase error:', error);
+    res.status(500).json({ error: 'Failed to complete purchase', message: error.message });
+  }
+});
+
 // Mint new NFT (admin only)
 router.post('/mint', [
   authenticateToken,
@@ -479,3 +517,4 @@ router.post('/transfer', [
 });
 
 module.exports = router;
+

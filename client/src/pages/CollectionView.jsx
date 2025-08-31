@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useWallet } from '../contexts/WalletContext';
 import { useQuery } from '@tanstack/react-query';
+import * as fcl from '@onflow/fcl';
 import api from '../services/api';
 
 const CollectionView = () => {
@@ -223,7 +224,45 @@ const CollectionView = () => {
                       <span className="text-2xl font-bold text-emerald-600">
                         {nft.isForSale && typeof nft.salePrice === 'number' ? `${nft.salePrice} FLOW` : 'Not for sale'}
                       </span>
-                      <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors">
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          try {
+                            const to = import.meta.env.VITE_TREASURY_ADDRESS;
+                            const amount = (typeof nft.salePrice === 'number') ? `${nft.salePrice.toFixed(1)}` : `${nft.salePrice}.0`;
+                            const cadence = `
+                              import FungibleToken from 0x9a0766d93b6608b7
+                              import FlowToken from 0x7e60df042a9c0868
+
+                              transaction(to: Address, amount: UFix64) {
+                                prepare(signer: auth(BorrowValue, Storage) &Account) {
+                                  let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
+                                    ?? panic("Missing FlowToken Vault")
+                                  let withdrawn <- vaultRef.withdraw(amount: amount)
+                                  let receiver = getAccount(to)
+                                    .capabilities
+                                    .borrow<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+                                    ?? panic("Missing receiver capability")
+                                  receiver.deposit(from: <- withdrawn)
+                                }
+                              }
+                            `;
+                            const txId = await fcl.mutate({
+                              cadence,
+                              args: (arg, t) => [arg(to, t.Address), arg(amount, t.UFix64)],
+                              payer: fcl.authz, proposer: fcl.authz, authorizations: [fcl.authz],
+                              limit: 200,
+                            });
+                            await fcl.tx(txId).onceSealed();
+
+                            await api.post('/nfts/purchase', { nftId: nft._id, flowTxId: txId });
+                            window.location.reload();
+                          } catch (err) {
+                            console.error('Buy failed', err);
+                          }
+                        }}
+                        className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors"
+                      >
                         Buy
                       </button>
                     </div>
