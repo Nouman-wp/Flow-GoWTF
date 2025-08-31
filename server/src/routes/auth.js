@@ -11,7 +11,7 @@ const router = express.Router();
 router.post('/flow-connect', [
   body('flowWalletAddress')
     .isString()
-    .matches(/^0x[a-fA-F0-9]{16}$/, 'Invalid Flow wallet address')
+    .matches(/^0x[a-fA-F0-9]{16}$/)
     .withMessage('Please provide a valid Flow wallet address'),
   body('username')
     .optional()
@@ -67,9 +67,12 @@ router.post('/flow-connect', [
     // Create new user
     const userData = {
       flowWalletAddress,
-      username: username || `User_${flowWalletAddress.slice(-6)}`,
-      email: email || null
+      // Use nearly-unique default username derived from full address to avoid collisions
+      username: username || `user_${flowWalletAddress.slice(2)}`,
     };
+    if (email) {
+      userData.email = email;
+    }
 
     user = new User(userData);
     await user.save();

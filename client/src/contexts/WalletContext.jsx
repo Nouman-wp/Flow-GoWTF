@@ -23,17 +23,22 @@ export const WalletProvider = ({ children }) => {
   // Configure FCL
   useEffect(() => {
     const isProd = import.meta.env.PROD;
+    const wcProjectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
     const accessNode = isProd
       ? (import.meta.env.VITE_FLOW_ACCESS_NODE || 'https://rest-mainnet.onflow.org')
       : (import.meta.env.VITE_FLOW_ACCESS_NODE || 'https://rest-testnet.onflow.org');
-    const discoveryWallet = isProd
+    const discoveryWalletUI = isProd
       ? (import.meta.env.VITE_FCL_DISCOVERY || 'https://fcl-discovery.onflow.org/authn')
       : (import.meta.env.VITE_FCL_DISCOVERY || 'https://fcl-discovery.onflow.org/testnet/authn');
+    const discoveryAuthnApi = isProd
+      ? 'https://fcl-discovery.onflow.org/api/authn'
+      : 'https://fcl-discovery.onflow.org/api/testnet/authn';
 
     fcl.config()
       .put('accessNode.api', accessNode)
-      .put('discovery.wallet', discoveryWallet)
-      .put('discovery.authn.endpoint', discoveryWallet)
+      .put('discovery.wallet', discoveryWalletUI)
+      .put('discovery.authn.endpoint', discoveryAuthnApi)
+      .put('wc.projectId', wcProjectId || '')
       .put('app.detail.title', isProd ? 'Aniverse NFT Platform' : 'Aniverse NFT Platform (Testnet)')
       .put('app.detail.icon', 'https://aniverse.com/icon.png');
 
