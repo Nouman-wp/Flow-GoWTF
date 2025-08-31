@@ -227,7 +227,7 @@ const Marketplace = () => {
                         {nft.isForSale && typeof nft.salePrice === 'number' ? `${nft.salePrice} FLOW` : 'Not for sale'}
                       </span>
                       <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg transition-colors">
-                        View Details
+                        Buy
                       </button>
                     </div>
                   </div>

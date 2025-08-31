@@ -1,30 +1,32 @@
-import NonFungibleToken from "./interfaces/NonFungibleToken.cdc"
-import MetadataViews from "./interfaces/MetadataViews.cdc"
+// Testnet standard contract
+import NonFungibleToken from 0x631e88ae7f1d7c20
 
 // Aniverse NFT Contract
 // This contract implements the Flow NFT standard for anime-themed NFTs
 
-pub contract AniverseNFT: NonFungibleToken {
+access(all) contract AniverseNFT: NonFungibleToken {
+
+    access(all) let CollectionStoragePath: StoragePath
+    access(all) let CollectionPublicPath: PublicPath
+    access(all) let MinterStoragePath: StoragePath
+
+    access(all) var totalSupply: UInt64
     
     // NFT Resource
-    pub resource NFT: NonFungibleToken.INFT, MetadataViews.Resolver {
+    access(all) resource NFT: NonFungibleToken.NFT {
         
-        pub let id: UInt64
-        pub let name: String
-        pub let description: String
-        pub let image: String
-        pub let externalURL: String?
-        pub let attributes: [Attribute]
-        pub let collection: String
-        pub let rarity: String
-        pub let mintDate: UFix64
-        pub let creator: Address
+        access(all) let id: UInt64
+        access(all) let name: String
+        access(all) let description: String
+        access(all) let image: String
+        access(all) let externalURL: String?
+        access(all) let attributes: [Attribute]
+        access(all) let collection: String
+        access(all) let rarity: String
+        access(all) let mintDate: UFix64
         
         // Metadata for the NFT
-        pub struct Attribute {
-            pub let trait_type: String
-            pub let value: String
-        }
+        access(all) struct Attribute { access(all) let trait_type: String; access(all) let value: String }
         
         init(
             id: UInt64,
@@ -34,8 +36,7 @@ pub contract AniverseNFT: NonFungibleToken {
             externalURL: String?,
             attributes: [Attribute],
             collection: String,
-            rarity: String,
-            creator: Address
+            rarity: String
         ) {
             self.id = id
             self.name = name
@@ -46,101 +47,61 @@ pub contract AniverseNFT: NonFungibleToken {
             self.collection = collection
             self.rarity = rarity
             self.mintDate = getCurrentBlock().timestamp
-            self.creator = creator
         }
         
-        // Required by NonFungibleToken.INFT
-        pub fun getID(): UInt64 {
+        // Required by NonFungibleToken.NFT
+        access(all) fun getID(): UInt64 {
             return self.id
-        }
-        
-        // Required by MetadataViews.Resolver
-        pub fun resolveView(_ view: Type): AnyStruct? {
-            switch view {
-                case Type<MetadataViews.Display>():
-                    return MetadataViews.Display(
-                        name: self.name,
-                        description: self.description,
-                        thumbnail: MetadataViews.HTTPFile(url: self.image),
-                        externalURL: self.externalURL
-                    )
-                case Type<MetadataViews.NFTView>():
-                    return MetadataViews.NFTView(
-                        id: self.id,
-                        name: self.name,
-                        description: self.description,
-                        thumbnail: self.image,
-                        externalURL: self.externalURL,
-                        attributes: self.attributes.map { attr in
-                            MetadataViews.Attribute(
-                                trait_type: attr.trait_type,
-                                value: attr.value
-                            )
-                        }
-                    )
-                default:
-                    return nil
-            }
         }
     }
     
     // Collection Resource
-    pub resource Collection: NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic, MetadataViews.ResolverCollection {
+    access(all) resource Collection: NonFungibleToken.Provider, NonFungibleToken.Receiver, NonFungibleToken.CollectionPublic {
         
-        pub var ownedNFTs: @{UInt64: NonFungibleToken.NFT}
-        pub var idCounter: UInt64
+        access(all) var ownedNFTs: @{UInt64: NonFungibleToken.NFT}
+        
         
         init() {
             self.ownedNFTs = {}
-            self.idCounter = 0
         }
         
         // Required by NonFungibleToken.Provider
-        pub fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
+        access(all) fun withdraw(withdrawID: UInt64): @NonFungibleToken.NFT {
             let nft <- self.ownedNFTs.remove(key: withdrawID) 
                 ?? panic("NFT does not exist in collection")
             return <- nft
         }
         
         // Required by NonFungibleToken.Receiver
-        pub fun deposit(token: @NonFungibleToken.NFT) {
+        access(all) fun deposit(token: @NonFungibleToken.NFT) {
             let nft = token as! @NFT
             self.ownedNFTs[nft.id] = <- nft
         }
         
         // Required by NonFungibleToken.CollectionPublic
-        pub fun getIDs(): [UInt64] {
+        access(all) fun getIDs(): [UInt64] {
             return self.ownedNFTs.keys
         }
         
-        pub fun borrowNFT(id: UInt64): &NonFungibleToken.NFT? {
+        access(all) fun borrowNFT(id: UInt64): &NonFungibleToken.NFT? {
             return &self.ownedNFTs[id] as &NonFungibleToken.NFT?
         }
         
-        // Required by MetadataViews.ResolverCollection
-        pub fun resolveView(_ view: Type): AnyStruct? {
-            return nil
-        }
-        
-        pub fun resolveViewTyped<T: MetadataViews.Resolver>(_ view: Type): T? {
-            return nil
-        }
-        
         // Get the number of NFTs in the collection
-        pub fun getLength(): Int {
+        access(all) fun getLength(): Int {
             return self.ownedNFTs.length
         }
         
         // Check if an NFT exists in the collection
-        pub fun contains(id: UInt64): Bool {
+        access(all) fun contains(id: UInt64): Bool {
             return self.ownedNFTs[id] != nil
         }
     }
     
     // Admin Resource for minting and managing NFTs
-    pub resource Admin {
-        
-        pub fun mintNFT(
+    access(all) resource Minter {
+
+        access(all) fun mintNFT(
             name: String,
             description: String,
             image: String,
@@ -150,79 +111,47 @@ pub contract AniverseNFT: NonFungibleToken {
             rarity: String,
             recipient: &{NonFungibleToken.CollectionPublic}
         ): UInt64 {
-            let id = self.uuid
-            
-            let nft = NFT(
-                id: id,
+            let newID = AniverseNFT.totalSupply + 1 as UInt64
+            AniverseNFT.totalSupply = newID
+
+            let nft <- create NFT(
+                id: newID,
                 name: name,
                 description: description,
                 image: image,
                 externalURL: externalURL,
                 attributes: attributes,
                 collection: collection,
-                rarity: rarity,
-                creator: recipient.owner?.address ?? panic("Invalid recipient")
+                rarity: rarity
             )
-            
+
             recipient.deposit(token: <- nft)
-            
-            emit NonFungibleToken.Withdraw(id: id, from: nil, to: recipient.owner?.address)
-            emit NonFungibleToken.Deposit(id: id, to: recipient.owner?.address, from: nil)
-            
-            return id
+
+            emit NonFungibleToken.Deposit(id: newID, to: recipient.owner?.address, from: nil)
+            emit NFTMinted(id: newID, name: name, collection: collection)
+
+            return newID
         }
-        
-        // Mint limited supply NFTs
-        pub fun mintLimitedNFT(
-            name: String,
-            description: String,
-            image: String,
-            externalURL: String?,
-            attributes: [NFT.Attribute],
-            collection: String,
-            rarity: String,
-            recipient: &{NonFungibleToken.CollectionPublic},
-            maxSupply: UInt64
-        ): UInt64 {
-            // Check if max supply reached
-            // This is a simplified version - in production you'd track supply per collection
-            return self.mintNFT(
-                name: name,
-                description: description,
-                image: image,
-                externalURL: externalURL,
-                attributes: attributes,
-                collection: collection,
-                rarity: rarity,
-                recipient: recipient
-            )
-        }
-        
-        // Create a new collection
-        pub fun createCollection(): @Collection {
+
+        access(all) fun createCollection(): @Collection {
             return <- create Collection()
         }
-        
-        // Destroy the admin resource
-        destroy() {}
+
+        // no custom destructor in Cadence 1.0
     }
     
     // Events
-    pub event CollectionCreated(owner: Address)
-    pub event NFTMinted(id: UInt64, name: String, collection: String)
+    access(all) event CollectionCreated(owner: Address)
+    access(all) event NFTMinted(id: UInt64, name: String, collection: String)
     
     // Public functions
-    pub fun createEmptyCollection(): @NonFungibleToken.Collection {
-        return <- create Collection()
-    }
+    access(all) fun createEmptyCollection(): @NonFungibleToken.Collection { return <- create Collection() }
     
     // Get the total supply of NFTs
-    pub fun getTotalSupply(): UInt64 {
-        return self.uuid
-    }
+    access(all) fun getTotalSupply(): UInt64 { return self.totalSupply }
     
     // Get NFT metadata by ID
-    pub fun getNFTMetadata(id: UInt64): NFT? {
+    access(all) fun getNFTMetadata(id: UInt64): NFT? {
         // This would need to be implemented with a mapping of all NFTs
         // For now, return nil
         return nil
@@ -230,7 +159,15 @@ pub contract AniverseNFT: NonFungibleToken {
     
     // Initialize the contract
     init() {
-        // Emit the contract initialization event
+        self.CollectionStoragePath = /storage/AniverseNFTCollection
+        self.CollectionPublicPath = /public/AniverseNFTCollection
+        self.MinterStoragePath = /storage/AniverseNFTMinter
+
+        self.totalSupply = 0
+
+        // create and save a minter in contract account storage
+        self.account.save(<- create Minter(), to: self.MinterStoragePath)
+
         emit NonFungibleToken.ContractInitialized()
     }
 }

@@ -5,31 +5,51 @@
     "testnet": "access.devnet.nodes.onflow.org:9000"
   },
   "contracts": {
-    "AniverseNFT": {
-      "source": "./AniverseNFT.cdc",
+    "NonFungibleToken": {
       "aliases": {
-        "emulator": "0xf8d6e0586b0a20c7",
-        "testnet": "0x0dffda0f5343e1ca",
-        "mainnet": "0x0dffda0f5343e1ca"
+        "testnet": "0x631e88ae7f1d7c20",
+        "mainnet": "0x1d7e57aa55817448"
       }
+    },
+    "MetadataViews": {
+      "aliases": {
+        "testnet": "0x631e88ae7f1d7c20",
+        "mainnet": "0x1d7e57aa55817448"
+      }
+    },
+    "FungibleToken": {
+      "aliases": {
+        "testnet": "0x9a0766d93b6608b7",
+        "mainnet": "0xf233dcee88fe0abe"
+      }
+    },
+    "FlowToken": {
+      "aliases": {
+        "testnet": "0x7e60df042a9c0868",
+        "mainnet": "0x1654653399040a61"
+      }
+    },
+    "AniverseNFT": {
+      "source": "./AniverseNFT.cdc"
     }
   },
   "accounts": {
-    "emulator-account": {
-      "address": "f8d6e0586b0a20c7",
-      "key": "f8e188e8af0b8b414be59c4a1a15ffdf"
-    },
-    "testnet-account": {
-      "address": "0x0dffda0f5343e1ca",
-      "key": "586bbe9d66dc1d71f13b95000c064996c01dbf834b776a659eef6889241e"
+  "testnet-account": {
+    "address": "0x0dffda0f5343e1ca",
+    "key": {
+      "type": "hex",
+      "index": 0,
+      "signatureAlgorithm": "ECDSA_secp256k1",
+      "hashAlgorithm": "SHA2_256",
+      "privateKey": "c819586bbe9d66dc1d71f13b95000c064996c01dbf834b776a659eef6889241e"
     }
-  },
+  }
+},
   "deployments": {
-    "emulator": {
-      "emulator-account": ["AniverseNFT"]
-    },
     "testnet": {
-      "testnet-account": ["AniverseNFT"]
+      "testnet-account": [
+        "AniverseNFT"
+      ]
     }
   }
 }
