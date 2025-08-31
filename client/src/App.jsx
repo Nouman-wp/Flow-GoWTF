@@ -17,6 +17,7 @@ import CollectionView from './pages/CollectionView';
 import Betting from './pages/Betting';
 import GameZone from './pages/GameZone';
 import GameDetail from './pages/GameDetail';
+import JujutsuArena from './pages/JujutsuArena';
 import Redeem from './pages/Redeem';
 import WalletDashboard from './pages/WalletDashboard';
 import WalletProfile from './pages/WalletProfile';
@@ -50,6 +51,7 @@ function App() {
                       <Route path="/marketplace/:collection/view" element={<CollectionView />} />
                       <Route path="/betting" element={<Betting />} />
                       <Route path="/gamezone" element={<GameZone />} />
+                      <Route path="/gamezone/jujutsu-arena" element={<JujutsuArena />} />
                       <Route path="/gamezone/:gameSlug" element={<GameDetail />} />
                       <Route path="/redeem" element={<Redeem />} />
                       <Route path="/wallet/:walletAddress/dashboard" element={<WalletDashboard />} />

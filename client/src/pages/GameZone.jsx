@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useWallet } from '../contexts/WalletContext';
 import { useQuery } from '@tanstack/react-query';
@@ -14,6 +14,55 @@ const GameZone = () => {
     queryFn: () => api.get('/games'),
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
+
+  // Fallback static games when API returns nothing
+  const staticGames = useMemo(() => ([
+    {
+      gameId: 'jujutsu-arena',
+      name: 'Cursed Clash (Jujutsu Arena)',
+      description: 'Jujutsu Kaisen inspired card-battle arena. Fast rounds, epic moves.',
+      image: 'https://static.bandainamcoent.eu/high/jujutsu-kaisen/jujutsu-kaisen-cursed-clash/00-page-setup/jjk-news-announcement-thumbnail.jpg',
+      category: 'combat',
+      difficulty: 'medium',
+      isActive: true,
+      maxPlayers: 1,
+      prizePool: 0,
+      startTime: new Date(Date.now() + 10 * 60 * 1000).toISOString(),
+      progress: 10,
+      rules: { battleType: 'solo', rounds: 3 }
+    },
+    {
+      gameId: 'poke-card-brawl',
+      name: 'PokéCard Brawl',
+      description: 'Turn-based card battles. Elemental counters and evolutions.',
+      image: 'https://static0.gamerantimages.com/wordpress/wp-content/uploads/2021/04/pokemon-anime-characters.jpg?q=70&fit=contain&w=1200&h=628&dpr=1',
+      category: 'trivia',
+      difficulty: 'easy',
+      isActive: false,
+      maxPlayers: 2,
+      prizePool: 0,
+      startTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      progress: 0,
+      rules: { maxNFTs: 5 }
+    },
+    {
+      gameId: 'hashira-match',
+      name: 'Hashira Match Quest',
+      description: 'Match-3 puzzle with Demon Slayer inspired abilities.',
+      image: 'https://static1.cbrimages.com/wordpress/wp-content/uploads/2024/06/demon-slayer-hashira-members.jpg',
+      category: 'puzzle',
+      difficulty: 'hard',
+      isActive: false,
+      maxPlayers: 1,
+      prizePool: 0,
+      startTime: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
+      progress: 0
+    }
+  ]), []);
+
+  const allGames = (gamesData?.data?.games && gamesData.data.games.length > 0)
+    ? gamesData.data.games
+    : staticGames;
 
   const categories = [
     { id: 'all', name: 'All Games', icon: '🎮' },
@@ -32,7 +81,7 @@ const GameZone = () => {
     { id: 'expert', name: 'Expert', color: 'text-red-600' },
   ];
 
-  const filteredGames = gamesData?.data?.games?.filter(game => {
+  const filteredGames = allGames.filter(game => {
     const matchesCategory = selectedCategory === 'all' || game.category === selectedCategory;
     const matchesDifficulty = selectedDifficulty === 'all' || game.difficulty === selectedDifficulty;
     return matchesCategory && matchesDifficulty;
@@ -293,8 +342,11 @@ const GameZone = () => {
                     {/* Action Button */}
                     <div className="flex gap-2">
                       {game.isActive ? (
-                        <button className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg transition-colors font-medium">
-                          {game.entryFee > 0 ? `Join for ${game.entryFee} FLOW` : 'Join Game'}
+                        <button
+                          onClick={() => window.open('/gamezone/jujutsu-arena', '_blank')}
+                          className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg transition-colors font-medium"
+                        >
+                          {game.entryFee > 0 ? `Play for ${game.entryFee} FLOW` : 'Play Now'}
                         </button>
                       ) : (
                         <button className="flex-1 bg-gray-400 text-white py-2 rounded-lg font-medium cursor-not-allowed">
