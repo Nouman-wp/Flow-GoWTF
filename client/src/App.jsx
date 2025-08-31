@@ -8,6 +8,7 @@ import { SocketProvider } from './contexts/SocketContext';
 
 // Components
 import Navbar from './components/layout/Navbar';
+import Footer from './components/layout/Footer';
 import DottedBackground from './components/ui/DottedBackground';
 
 // Pages
@@ -60,6 +61,7 @@ function App() {
                     </Routes>
                   </div>
                 </main>
+                <Footer />
                 
                 {/* Toast notifications */}
                 <Toaster

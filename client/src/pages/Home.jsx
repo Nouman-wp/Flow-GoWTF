@@ -13,6 +13,8 @@ import {
   Gift
 } from 'lucide-react';
 import { useWallet } from '../contexts/WalletContext';
+import { useQuery } from '@tanstack/react-query';
+import api from '../services/api';
 
 const Home = () => {
   const { isConnected } = useWallet();
@@ -40,35 +42,14 @@ const Home = () => {
     }
   ];
 
-  const featuredCollections = [
-    {
-      id: 'naruto',
-      name: 'Naruto Collection',
-      description: 'Legendary ninja warriors and powerful jutsu techniques',
-      image: '/images/collections/naruto.jpg',
-      count: 1000,
-      floorPrice: '0.5 FLOW',
-      color: 'from-orange-400 to-red-500'
-    },
-    {
-      id: 'bleach',
-      name: 'Bleach Collection',
-      description: 'Soul Reapers and Hollows from the spiritual realm',
-      image: '/images/collections/bleach.jpg',
-      count: 800,
-      floorPrice: '0.3 FLOW',
-      color: 'from-blue-400 to-indigo-500'
-    },
-    {
-      id: 'onepiece',
-      name: 'One Piece Collection',
-      description: 'Pirates seeking the ultimate treasure',
-      image: '/images/collections/onepiece.jpg',
-      count: 1200,
-      floorPrice: '0.7 FLOW',
-      color: 'from-yellow-400 to-orange-500'
-    }
-  ];
+  // Fetch live collections to show as featured with images
+  const { data: collectionsData } = useQuery({
+    queryKey: ['home-featured-collections'],
+    queryFn: () => api.get('/nfts/collections'),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const featuredCollections = (collectionsData?.data?.collections || []).slice(0, 6);
 
   const stats = [
     { label: 'Total NFTs', value: '50K+', icon: Sparkles },
@@ -80,20 +61,28 @@ const Home = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto text-center">
+      <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
+        <div className="absolute inset-0">
+          <img
+            src="https://images8.alphacoders.com/761/761504.jpg"
+            alt="Aniverse hero"
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-white/80 dark:to-gray-900/70" />
+        </div>
+        <div className="relative max-w-7xl mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 dark:text-white mb-6">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
               Welcome to{' '}
               <span className="bg-gradient-to-r from-emerald-500 to-emerald-700 bg-clip-text text-transparent">
                 Aniverse
               </span>
             </h1>
-            <p className="text-xl sm:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
+            <p className="text-xl sm:text-2xl text-white mb-8 max-w-3xl mx-auto">
               The next-generation NFT platform for anime lovers. Collect, trade, and showcase your favorite anime characters on the Flow blockchain.
             </p>
             
@@ -204,7 +193,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Featured Collections Section */}
+      {/* Featured Collections Section (live images) */}
       <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-800">
         <div className="max-w-7xl mx-auto">
           <motion.div
@@ -232,26 +221,31 @@ const Home = () => {
                 viewport={{ once: true }}
                 className="group"
               >
-                <Link to={`/marketplace/${collection.id}/view`}>
-                  <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-200 group-hover:scale-105">
-                    <div className="h-48 bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 flex items-center justify-center">
-                      <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${collection.color} flex items-center justify-center`}>
-                        <Star className="w-10 h-10 text-white" />
+                <Link to={`/marketplace/${collection._id}/view`}>
+                  <div className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-200">
+                    <div className="relative h-48 overflow-hidden">
+                      <img
+                        src={collection.image?.startsWith('ipfs://') ? collection.image.replace('ipfs://', 'https://gateway.pinata.cloud/ipfs/') : collection.image}
+                        alt={collection.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                      <div className="absolute bottom-3 left-4 right-4 flex items-center justify-between text-white text-sm">
+                        <span className="px-3 py-1 rounded-full bg-white/10 border border-white/20">
+                          {(collection.attributes?.rarity || 'common').toUpperCase()}
+                        </span>
+                        <span className="font-semibold">
+                          {collection.statistics?.floorPrice ? `${collection.statistics.floorPrice} FLOW` : ''}
+                        </span>
                       </div>
                     </div>
                     <div className="p-6">
                       <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
                         {collection.name}
                       </h3>
-                      <p className="text-gray-600 dark:text-gray-400 mb-4">
+                      <p className="text-gray-600 dark:text-gray-400 line-clamp-2">
                         {collection.description}
                       </p>
-                      <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
-                        <span>{collection.count} NFTs</span>
-                        <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                          Floor: {collection.floorPrice}
-                        </span>
-                      </div>
                     </div>
                   </div>
                 </Link>

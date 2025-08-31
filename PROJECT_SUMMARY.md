@@ -119,7 +119,6 @@ Flow-Aniverse/
 | **Database** | MongoDB + Mongoose | Data persistence |
 | **Blockchain** | Flow + Cadence | NFT operations |
 | **Storage** | IPFS + Pinata | Decentralized storage |
-| **Real-time** | Socket.io | Live updates |
 | **Authentication** | JWT + Flow wallet | Secure access |
 
 ## 🎉 **Ready to Launch!**

@@ -1,3 +1,5 @@
 .env
 node_modules
 assets
+PROJECT_SUMMARY.md
+guide.md

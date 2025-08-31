@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useWallet } from '../contexts/WalletContext';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
+import toast from 'react-hot-toast';
 
 const Betting = () => {
   const { user, isConnected } = useWallet();
@@ -139,6 +140,22 @@ const Betting = () => {
     }
   };
 
+  // Map popular matches to provided images when backend doesn't include one
+  const getMatchImage = (match) => {
+    if (match?.metadata?.image) return match.metadata.image;
+    const t = (match?.title || '').toLowerCase();
+    if (t.includes('naruto') && t.includes('sasuke')) {
+      return 'https://i.pinimg.com/736x/e9/1a/13/e91a1331ad8950ce2727dcd287a2cdb8.jpg';
+    }
+    if (t.includes('one piece') && t.includes('treasure')) {
+      return 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSonkEZ8Yc4SEifhgi8rB6hkELXWRWls7gOyw&s';
+    }
+    if (t.includes('dragon ball') && t.includes('tournament')) {
+      return 'https://wallpapers.com/images/hd/dragon-ball-super-ultra-instinct-vtm3rprigp9ovrmu.jpg';
+    }
+    return 'https://via.placeholder.com/400x200/10b981/ffffff?text=Match';
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-emerald-50 to-emerald-100 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Hero Section */}
@@ -254,7 +271,7 @@ const Betting = () => {
                   {/* Match Image */}
                   <div className="relative overflow-hidden">
                     <img
-                      src={match.metadata?.image || 'https://via.placeholder.com/400x200/10b981/ffffff?text=Match'}
+                      src={getMatchImage(match)}
                       alt={match.title}
                       className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
                     />
@@ -342,22 +359,20 @@ const Betting = () => {
                     {/* Action Button */}
                     <div className="flex gap-2">
                       {match.status === 'upcoming' && (
-                        <button className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white py-2 rounded-lg transition-colors font-medium">
-                          Place Bet
-                        </button>
+                        <BetButton match={match} disabled={!isConnected} />
                       )}
                       {match.status === 'active' && (
                         <button className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 rounded-lg transition-colors font-medium">
-                          View Live
+                          In-Play
                         </button>
                       )}
                       {match.status === 'completed' && (
                         <button className="flex-1 bg-purple-500 hover:bg-purple-600 text-white py-2 rounded-lg transition-colors font-medium">
-                          View Results
+                          Settled
                         </button>
                       )}
                       <button className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                        Details
+                        Markets
                       </button>
                     </div>
                   </div>
@@ -372,3 +387,112 @@ const Betting = () => {
 };
 
 export default Betting;
+
+// Bet modal and button (UI only; no schema/model changes)
+const BetButton = ({ match, disabled }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+        className="flex-1 bg-emerald-500 hover:bg-emerald-600 disabled:bg-gray-400 text-white py-2 rounded-lg transition-colors font-medium"
+      >
+        Place Bet
+      </button>
+      <AnimatePresence>
+        {open && (
+          <BetModal match={match} onClose={() => setOpen(false)} />)
+        }
+      </AnimatePresence>
+    </>
+  );
+};
+
+const BetModal = ({ match, onClose }) => {
+  const [selection, setSelection] = useState(match.participants?.[0]?.id || '');
+  const [stake, setStake] = useState(match.minBet || 1);
+  const selected = match.participants?.find(p => p.id === selection);
+  const potential = selected ? Number((Number(stake || 0) * Number(selected.odds || 1)).toFixed(2)) : 0;
+
+  const placeBet = () => {
+    toast.success('Bet placed! (UI only)');
+    onClose();
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        className="w-full max-w-md bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800"
+      >
+        <div className="p-6">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <div className="text-xs uppercase text-gray-500">Bet Slip</div>
+              <div className="text-lg font-semibold text-gray-900 dark:text-white">{match.title}</div>
+            </div>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300">✕</button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Select Market</div>
+              <select
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"
+                value={selection}
+                onChange={(e) => setSelection(e.target.value)}
+              >
+                {(match.participants || []).map((p) => (
+                  <option key={p.id} value={p.id}>{p.name} • {p.odds}x</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between text-sm text-gray-600 dark:text-gray-400 mb-1">
+                <span>Stake (FLOW)</span>
+                <span className="text-xs">Min {match.minBet} • Max {match.maxBet}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={match.minBet}
+                  max={match.maxBet}
+                  step="1"
+                  value={stake}
+                  onChange={(e) => setStake(e.target.value)}
+                  className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800"
+                />
+                <div className="text-sm text-gray-500">FLOW</div>
+              </div>
+            </div>
+
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-gray-600 dark:text-gray-400">Potential Return</span>
+                <span className="font-semibold text-emerald-600">{potential} FLOW</span>
+              </div>
+            </div>
+
+            <button
+              onClick={placeBet}
+              className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+            >
+              Place Bet
+            </button>
+            <div className="text-xs text-gray-500 text-center">UI-only demo. No funds are moved.</div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+

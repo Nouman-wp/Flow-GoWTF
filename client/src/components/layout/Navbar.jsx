@@ -56,11 +56,14 @@ const Navbar = () => {
             <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center"
+              className="relative w-10 h-10"
             >
-              <span className="text-white font-bold text-xl font-anime">A</span>
+              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-700" />
+              <svg viewBox="0 0 48 48" className="absolute inset-0">
+                <path d="M12 34 L24 8 L36 34 L30 34 L24 20 L18 34 Z" fill="white" opacity="0.95" />
+              </svg>
             </motion.div>
-            <span className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-800 bg-clip-text text-transparent font-anime">
+            <span className="text-2xl font-extrabold bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
               Aniverse
             </span>
           </Link>
