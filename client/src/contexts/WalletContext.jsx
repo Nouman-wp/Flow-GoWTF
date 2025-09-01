@@ -42,14 +42,43 @@ export const WalletProvider = ({ children }) => {
       .put('app.detail.title', isProd ? 'Aniverse NFT Platform' : 'Aniverse NFT Platform (Testnet)')
       .put('app.detail.icon', 'https://aniverse.com/icon.png');
 
+    if (!wcProjectId) {
+      console.warn('[FCL] WalletConnect projectId is not set. Some wallets may not work.');
+    }
+
+    // Ensure we stop connecting state if the auth view is closed or responds without login
+    const onClosed = () => setIsConnecting(false);
+    const onResponse = () => setIsConnecting(false);
+    const supportsEvents = typeof fcl.on === 'function' && typeof fcl.off === 'function';
+    if (supportsEvents) {
+      try {
+        fcl.on('FCL:VIEW:CLOSED', onClosed);
+        fcl.on('FCL:VIEW:RESPONSE', onResponse);
+      } catch (e) {
+        console.warn('[FCL] Event registration failed:', e);
+      }
+    }
+
     // Subscribe to user changes
     fcl.currentUser.subscribe((user) => {
       if (user && user.loggedIn) {
         handleUserConnected(user);
       } else {
         handleUserDisconnected();
+        setIsConnecting(false);
       }
     });
+
+    return () => {
+      if (supportsEvents) {
+        try {
+          fcl.off('FCL:VIEW:CLOSED', onClosed);
+          fcl.off('FCL:VIEW:RESPONSE', onResponse);
+        } catch (e) {
+          // no-op
+        }
+      }
+    };
   }, []);
 
   // Handle user connection
@@ -92,6 +121,7 @@ export const WalletProvider = ({ children }) => {
   const handleUserDisconnected = () => {
     setUser(null);
     setIsConnected(false);
+    setIsConnecting(false);
     localStorage.removeItem('aniverse-token');
     delete api.defaults.headers.common['Authorization'];
     
